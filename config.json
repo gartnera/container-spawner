@@ -1,0 +1,6 @@
+{
+  "image": "sshd",
+  "port": 1337,
+  "containerPort": "22/tcp"
+}
+
