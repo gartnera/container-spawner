@@ -2,7 +2,7 @@
   "name": "container-spawner",
   "version": "1.0.0",
   "description": "A program to spawn containers, then proxy TCP connection to that container.",
-  "main": "index.js",
+  "main": "./src/ContainerSpawner.js",
   "repository": "https://github.com/gartnera/container-spawner",
   "author": "Alex Gartner",
   "license": "MIT",
