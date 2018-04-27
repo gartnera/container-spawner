@@ -3,6 +3,9 @@ const net = require('net');
 const delay = require('delay');
 const Docker = require('dockerode');
 const getPort = require('get-port');
+const Logger = require('logplease');
+
+const logger = Logger.create('ContainerSpawner');
 
 class ContainerSpawner {
   constructor(config) {
@@ -73,6 +76,9 @@ class ContainerSpawner {
 
   _doTcpProxy(client, port) {
     return new Promise((resolve) => {
+      client.on('error', resolve);
+      client.on('close', resolve);
+
       const service = new net.Socket();
 
       service.connect(port, '127.0.0.1', () => {
@@ -80,22 +86,8 @@ class ContainerSpawner {
         service.pipe(client);
       });
 
-      /*
-      const endFunction = () => {
-        if (!service.destroyed) {
-          service.end();
-        }
-        if (!client.destroyed) {
-          client.end();
-        }
-        resolve();
-      };
-      */
-
       service.on('error', resolve);
       service.on('close', resolve);
-      client.on('error', resolve);
-      client.on('close', resolve);
 
       if (this.config.timeout) {
         setTimeout(resolve, this.config.timeout);
@@ -109,16 +101,36 @@ class ContainerSpawner {
   }
 
   async _clientHandler(client) {
+    // ignore errors so logic not interrupted
+    client.on('error', () => {});
+
+    if (!client.remoteAddress) {
+      logger.warn('client immediately disconnected');
+      return;
+    }
+
+    logger.info(`new connection from ${client.remoteAddress}`);
+
     await this._handleRateLimit(client);
-    const { container, avaliablePort } = await this._setupContainer();
+    if (client.destroyed) {
+      logger.warn(`client ${client.remoteAddress} disconnected before container created`);
+      return;
+    }
+    const { container, avaliablePort } = await this._setupContainer(client);
+
+    const id = container.id.substring(0, 12);
+    logger.info(`container ${client.remoteAddress}/${id} created`);
 
     await this._doTcpProxy(client, avaliablePort);
+    logger.info(`session ${client.remoteAddress}/${id} ending`);
     await ContainerSpawner._cleanupContainer(container);
   }
 
   start() {
     this.server = net.createServer(this._clientHandler.bind(this));
-    this.server.listen(this.config.port, '0.0.0.0');
+    const host = '0.0.0.0';
+    this.server.listen(this.config.port, host);
+    logger.info(`listening on ${host}:${this.config.port}`);
   }
 }
 
