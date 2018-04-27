@@ -7,8 +7,10 @@
   "author": "Alex Gartner",
   "license": "MIT",
   "scripts": {
-    "lint": "./node_modules/.bin/eslint src/* index.js",
-    "start": "node index.js"
+    "lint": "eslint src/* index.js",
+    "start": "node index.js",
+    "test": "jest src/**",
+    "e2e": "jest e2e"
   },
   "devDependencies": {
     "eslint": "^4.19.1",
@@ -16,7 +18,8 @@
     "eslint-plugin-import": "^2.11.0",
     "eslint-plugin-jest": "^21.15.1",
     "jest": "^22.4.3",
-    "jest-junit": "^3.7.0"
+    "jest-junit": "^3.7.0",
+    "node-ssh": "^5.1.1"
   },
   "dependencies": {
     "delay": "^2.0.0",

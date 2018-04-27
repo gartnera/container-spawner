@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/node:7.10
+      - image: circleci/node:9.11
     working_directory: ~/repo
     steps:
       - checkout
@@ -22,7 +22,7 @@ jobs:
           name: "JavaScript Test Suite"
           environment:
             JEST_JUNIT_OUTPUT: reports/junit/js-test-results.xml
-          command: yarn jest -- --ci --testResultsProcessor="jest-junit"
+          command: yarn test -- --ci --testResultsProcessor="jest-junit"
       - store_test_results:
           path: reports/junit
       - store_artifacts:

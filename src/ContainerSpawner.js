@@ -22,6 +22,9 @@ class ContainerSpawner {
   }
 
   static validateConfig(config) {
+    if (!config) {
+      throw new Error('Required parameter config not provided');
+    }
     const requiredProperties = ['image', 'port', 'containerPort'];
     for (const prop of requiredProperties) {
       if (!(prop in config)) {
@@ -131,6 +134,11 @@ class ContainerSpawner {
     const host = '0.0.0.0';
     this.server.listen(this.config.port, host);
     logger.info(`listening on ${host}:${this.config.port}`);
+  }
+
+  stop() {
+    this.server.close();
+    this.server.unref();
   }
 }
 
