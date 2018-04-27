@@ -1,6 +1,8 @@
 {
   "image": "sshd",
   "port": 1337,
-  "containerPort": "22/tcp"
+  "containerPort": "22/tcp",
+  "timeout": 5000,
+  "rateLimit": 5000
 }
 
