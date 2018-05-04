@@ -7,18 +7,20 @@ const delay = require('delay');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
-afterEach(async () => {
-  // we have to wait between tests for the tcp server to shutdown...
-  await delay(1500);
+let beforeContainerCount;
+
+beforeAll(async () => {
+  const beforeContainers = await docker.listContainers();
+  beforeContainerCount = beforeContainers.length;
 });
 
-describe('ContainerSpawner initilization', () => {
-  const config = {
-    image: 'sshd',
-    port: 1337,
-    containerPort: '22/tcp',
-  };
+const config = {
+  image: 'ctf-sshd',
+  port: 1337,
+  containerPort: '22/tcp',
+};
 
+describe('ContainerSpawner initilization', () => {
   let s;
 
   beforeEach(() => {
@@ -26,38 +28,24 @@ describe('ContainerSpawner initilization', () => {
   });
 
   afterEach(async () => {
-    s.stop();
+    await s.stop();
   });
 
-  test('start()', () => {
-    expect(() => s.start()).not.toThrowError();
+  test('start()', async () => {
+    await expect(s.start()).resolves.toBe(undefined);
   });
 });
 
 describe('Container creation', () => {
-  const config = {
-    image: 'sshd',
-    port: 1234,
-    containerPort: '22/tcp',
-  };
-
   let s;
 
   beforeEach(async () => {
     s = new ContainerSpawner(config);
-    s.start();
+    await s.start();
   });
 
   afterEach(async () => {
-    s.stop();
-  });
-
-  test('connection is not rejected', (done) => {
-    const client = new net.Socket();
-    client.connect(config.port, '127.0.0.1', () => {
-      client.end();
-      done();
-    });
+    await s.stop();
   });
 
   test('connection creates new container', async (done) => {
@@ -80,21 +68,15 @@ describe('Container creation', () => {
 });
 
 describe('SSH proxy tests', () => {
-  const config = {
-    image: 'sshd',
-    port: 1234,
-    containerPort: '22/tcp',
-  };
-
   let s;
 
   beforeEach(async () => {
     s = new ContainerSpawner(config);
-    s.start();
+    await s.start();
   });
 
   afterEach(async () => {
-    s.stop();
+    await s.stop();
   });
 
   test('can connect', async (done) => {
@@ -121,6 +103,20 @@ describe('SSH proxy tests', () => {
     const res = await ssh.execCommand('id');
     expect(res.stdout).toContain('ctf');
     ssh.dispose();
+    done();
+  });
+});
+
+describe('Final tests', () => {
+  // wait for final containers to be cleaned up.
+  beforeEach(async () => {
+    await delay(1000);
+  });
+
+  test('no leftover containers', async (done) => {
+    const currentContainers = await docker.listContainers();
+    const currentContainerCount = currentContainers.length;
+    expect(currentContainerCount).toEqual(beforeContainerCount);
     done();
   });
 });
