@@ -1,5 +1,5 @@
 {
-  "image": "sshd",
+  "image": "agartner/ctf-sshd",
   "port": 1337,
   "containerPort": "22/tcp",
   "timeout": 5000,
