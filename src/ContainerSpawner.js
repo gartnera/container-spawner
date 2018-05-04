@@ -130,15 +130,24 @@ class ContainerSpawner {
   }
 
   start() {
-    this.server = net.createServer(this._clientHandler.bind(this));
-    const host = '0.0.0.0';
-    this.server.listen(this.config.port, host);
-    logger.info(`listening on ${host}:${this.config.port}`);
+    return new Promise((resolve) => {
+      this.server = net.createServer(this._clientHandler.bind(this));
+      const host = '0.0.0.0';
+      this.server.on('listening', () => {
+        logger.info(`listening on ${host}:${this.config.port}`);
+        resolve();
+      });
+      this.server.listen(this.config.port, host);
+    });
   }
 
   stop() {
-    this.server.close();
-    this.server.unref();
+    return new Promise((resolve) => {
+      this.server.close(() => {
+        logger.info('server shutting down');
+        resolve();
+      });
+    });
   }
 }
 
