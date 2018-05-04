@@ -1,10 +1,18 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/node:9.11
+    machine:
+      enabled: true
     working_directory: ~/repo
     steps:
+      - run:
+          name: 'Dependencies'
+          command: |
+            rm -rf $NVM_DIR
+            curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+            echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+            curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+            sudo apt update && sudo apt install nodejs yarn
       - checkout
       - restore_cache:
           keys:
@@ -23,6 +31,11 @@ jobs:
           environment:
             JEST_JUNIT_OUTPUT: reports/junit/js-test-results.xml
           command: yarn test -- --ci --testResultsProcessor="jest-junit"
+      - run:
+          name: "JavaScript Integration Suite"
+          environment:
+            JEST_JUNIT_OUTPUT: reports/junit/js-e2e-results.xml
+          command: yarn e2e -- --ci --testResultsProcessor="jest-junit"
       - store_test_results:
           path: reports/junit
       - store_artifacts:
