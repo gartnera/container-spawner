@@ -41,3 +41,4 @@ jobs:
           path: reports/junit
       - store_artifacts:
           path: reports/junit
+      - run: bash <(curl -s https://codecov.io/bash)
