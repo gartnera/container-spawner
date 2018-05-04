@@ -4,6 +4,7 @@ const ContainerSpawner = require('../src/ContainerSpawner');
 const Docker = require('dockerode');
 const SSH = require('node-ssh');
 const delay = require('delay');
+const exec = require('async-exec').default;
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
@@ -103,6 +104,55 @@ describe('SSH proxy tests', () => {
     const res = await ssh.execCommand('id');
     expect(res.stdout).toContain('ctf');
     ssh.dispose();
+    done();
+  });
+});
+
+describe('Quirks', () => {
+  let s;
+
+  beforeAll(async () => {
+    // wait for previous containers to be destroyed
+    await delay(1000);
+  });
+
+  beforeEach(async () => {
+    s = new ContainerSpawner(config);
+    await s.start();
+  });
+
+  afterEach(async () => {
+    await s.stop();
+  });
+
+  test('nmap connect scan', async (done) => {
+    const startingContainers = await docker.listContainers();
+    const startingContainerCount = startingContainers.length;
+
+    await exec(`nmap -sT -p ${config.port} localhost`);
+
+    // wait for containers to be deleted
+    await delay(1000);
+    const currentContainers = await docker.listContainers();
+    const currentContainerCount = currentContainers.length;
+    expect(currentContainerCount).toEqual(startingContainerCount);
+    done();
+  });
+
+  test('nmap spam', async (done) => {
+    const startingContainers = await docker.listContainers();
+    const startingContainerCount = startingContainers.length;
+
+    await exec(`nmap -sT -p ${config.port} localhost`);
+    await exec(`nmap -sT -p ${config.port} localhost`);
+    await exec(`nmap -sT -p ${config.port} localhost`);
+    await exec(`nmap -sT -p ${config.port} localhost`);
+
+    // wait for containers to be deleted
+    await delay(1000);
+    const currentContainers = await docker.listContainers();
+    const currentContainerCount = currentContainers.length;
+    expect(currentContainerCount).toEqual(startingContainerCount);
     done();
   });
 });

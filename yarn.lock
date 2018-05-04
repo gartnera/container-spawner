@@ -188,6 +188,10 @@ astral-regex@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/astral-regex/-/astral-regex-1.0.0.tgz#6c8c3fb827dd43ee3918f27b82782ab7658a6fd9"
 
+async-exec@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/async-exec/-/async-exec-1.1.0.tgz#f7021613678fa5827edf0b42e600f27af1b8c1f0"
+
 async-limiter@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/async-limiter/-/async-limiter-1.0.0.tgz#78faed8c3d074ab81f22b4e985d79e8738f720f8"
