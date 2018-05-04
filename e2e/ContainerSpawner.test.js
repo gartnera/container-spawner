@@ -15,7 +15,7 @@ beforeAll(async () => {
 });
 
 const config = {
-  image: 'ctf-sshd',
+  image: 'agartner/ctf-sshd',
   port: 1337,
   containerPort: '22/tcp',
 };
