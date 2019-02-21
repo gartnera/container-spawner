@@ -56,9 +56,10 @@ class ContainerSpawner {
 
   async _setupContainer() {
     const avaliablePort = await getPort({ host: '127.0.0.1' });
+    const pidsLimit = this.config.pidsLimit ? this.config.pidsLimit : 20;
     const container = await this.docker.createContainer({
       Image: this.config.image,
-      PidsLimit: 20,
+      PidsLimit: pidsLimit,
       PortBindings: {
         [this.config.containerPort]: [
           {
