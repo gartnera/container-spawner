@@ -16,7 +16,7 @@ beforeAll(async () => {
 });
 
 const config = {
-  image: 'agartner/ctf-sshd',
+  image: 'ghcr.io/gartnera/ctf-sshd',
   port: 1337,
   containerPort: '22/tcp',
 };
