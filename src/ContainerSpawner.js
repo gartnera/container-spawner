@@ -55,18 +55,24 @@ class ContainerSpawner {
   }
 
   async _setupContainer() {
-    const avaliablePort = await getPort({ host: '127.0.0.1' });
+    const availablePort = await getPort({ host: '127.0.0.1' });
+    const portDesc = `${this.config.containerPort}/tcp`;
     const pidsLimit = this.config.pidsLimit ? this.config.pidsLimit : 20;
     const container = await this.docker.createContainer({
       Image: this.config.image,
-      PidsLimit: pidsLimit,
-      PortBindings: {
-        [this.config.containerPort]: [
-          {
-            HostIP: '127.0.0.1',
-            HostPort: avaliablePort.toString(),
-          },
-        ],
+      HostConfig: {
+        PidsLimit: pidsLimit,
+        PortBindings: {
+          [portDesc]: [
+            {
+              HostIP: '127.0.0.1',
+              HostPort: availablePort.toString(),
+            },
+          ],
+        },
+      },
+      ExposedPorts: {
+        [portDesc]: {},
       },
     });
 
@@ -75,7 +81,7 @@ class ContainerSpawner {
     // wait slightly longer for container to start. Otherwise connection may randomly get reset.
     await delay(200);
 
-    return { container, avaliablePort };
+    return { container, availablePort };
   }
 
   _doTcpProxy(client, port) {
@@ -120,12 +126,12 @@ class ContainerSpawner {
       logger.warn(`client ${client.remoteAddress} disconnected before container created`);
       return;
     }
-    const { container, avaliablePort } = await this._setupContainer(client);
+    const { container, availablePort } = await this._setupContainer(client);
 
     const id = container.id.substring(0, 12);
     logger.info(`container ${client.remoteAddress}/${id} created`);
 
-    await this._doTcpProxy(client, avaliablePort);
+    await this._doTcpProxy(client, availablePort);
     logger.info(`session ${client.remoteAddress}/${id} ending`);
     await ContainerSpawner._cleanupContainer(container);
   }
