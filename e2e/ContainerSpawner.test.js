@@ -3,7 +3,7 @@ const net = require('net');
 const ContainerSpawner = require('../src/ContainerSpawner');
 const Docker = require('dockerode');
 const SSH = require('node-ssh');
-const delay = require('delay');
+const {setTimeout: delay} = require('node:timers/promises');
 const exec = require('async-exec').default;
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
@@ -57,20 +57,20 @@ beforeAll(async () => {
       const startingContainerCount = startingContainers.length;
 
       return new Promise((resolve) => {
-      const client = new net.Socket();
-      client.connect(config.port, '127.0.0.1', async () => {
-        // wait for container to be created
-        await delay(1000);
+        const client = new net.Socket();
+        client.connect(config.port, '127.0.0.1', async () => {
+          // wait for container to be created
+          await delay(1000);
 
-        const currentContainers = await docker.listContainers();
-        const currentContainerCount = currentContainers.length;
-        expect(currentContainerCount).toEqual(startingContainerCount + 1);
+          const currentContainers = await docker.listContainers();
+          const currentContainerCount = currentContainers.length;
+          expect(currentContainerCount).toEqual(startingContainerCount + 1);
 
-        client.end();
+          client.end();
           resolve();
+        });
       });
     });
-  });
   });
 
   describe(`SSH proxy tests (${mode})`, () => {

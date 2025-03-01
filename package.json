@@ -23,9 +23,8 @@
     "node-ssh": "^5.1.1"
   },
   "dependencies": {
-    "delay": "^2.0.0",
-    "dockerode": "^3",
-    "get-port": "^3.2.0",
-    "logplease": "^1.2.14"
+    "dockerode": "^4.0.4",
+    "get-port": "5.1.1",
+    "logplease": "^1.2.15"
   }
 }
