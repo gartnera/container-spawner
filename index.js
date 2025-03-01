@@ -6,7 +6,6 @@ const ContainerSpawner = require('./src/ContainerSpawner');
 
 const logger = Logger.create('index');
 
-
 let configPath = 'config.json';
 
 if ('CONFIG_PATH' in process.env) {

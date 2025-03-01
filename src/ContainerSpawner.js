@@ -1,6 +1,6 @@
 const net = require('net');
 
-const delay = require('delay');
+const { setTimeout: delay } = require('node:timers/promises');
 const Docker = require('dockerode');
 const getPort = require('get-port');
 const Logger = require('logplease');
