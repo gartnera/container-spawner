@@ -52,10 +52,11 @@ beforeAll(async () => {
       await s.stop();
     });
 
-    test('connection creates new container', async (done) => {
+    test('connection creates new container', async () => {
       const startingContainers = await docker.listContainers();
       const startingContainerCount = startingContainers.length;
 
+      return new Promise((resolve) => {
       const client = new net.Socket();
       client.connect(config.port, '127.0.0.1', async () => {
         // wait for container to be created
@@ -66,9 +67,10 @@ beforeAll(async () => {
         expect(currentContainerCount).toEqual(startingContainerCount + 1);
 
         client.end();
-        done();
+          resolve();
       });
     });
+  });
   });
 
   describe(`SSH proxy tests (${mode})`, () => {
@@ -83,7 +85,7 @@ beforeAll(async () => {
       await s.stop();
     });
 
-    test('can connect', async (done) => {
+    test('can connect', async () => {
       const ssh = new SSH();
       await ssh.connect({
         host: '127.0.0.1',
@@ -92,10 +94,9 @@ beforeAll(async () => {
         tryKeyboard: true,
       });
       ssh.dispose();
-      done();
     });
 
-    test('can run command', async (done) => {
+    test('can run command', async () => {
       const ssh = new SSH();
       await ssh.connect({
         host: '127.0.0.1',
@@ -107,7 +108,6 @@ beforeAll(async () => {
       const res = await ssh.execCommand('id');
       expect(res.stdout).toContain('ctf');
       ssh.dispose();
-      done();
     });
   });
 
@@ -128,7 +128,7 @@ beforeAll(async () => {
       await s.stop();
     });
 
-    test('nmap connect scan', async (done) => {
+    test('nmap connect scan', async () => {
       const startingContainers = await docker.listContainers();
       const startingContainerCount = startingContainers.length;
 
@@ -139,10 +139,9 @@ beforeAll(async () => {
       const currentContainers = await docker.listContainers();
       const currentContainerCount = currentContainers.length;
       expect(currentContainerCount).toEqual(startingContainerCount);
-      done();
     });
 
-    test('nmap spam', async (done) => {
+    test('nmap spam', async () => {
       const startingContainers = await docker.listContainers();
       const startingContainerCount = startingContainers.length;
 
@@ -156,7 +155,6 @@ beforeAll(async () => {
       const currentContainers = await docker.listContainers();
       const currentContainerCount = currentContainers.length;
       expect(currentContainerCount).toEqual(startingContainerCount);
-      done();
     });
   });
 });
@@ -167,10 +165,9 @@ describe('Final tests', () => {
     await delay(1000);
   });
 
-  test('no leftover containers', async (done) => {
+  test('no leftover containers', async () => {
     const currentContainers = await docker.listContainers();
     const currentContainerCount = currentContainers.length;
     expect(currentContainerCount).toEqual(beforeContainerCount);
-    done();
   });
 });
