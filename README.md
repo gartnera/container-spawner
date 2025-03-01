@@ -2,6 +2,14 @@ container-spawner allows you spawn ephemeral docker containers for each TCP conn
 
 It's typically used with [ctf-sshd](https://github.com/gartnera/ctf-sshd) to serve CTF challenges somewhat securely. The main goal is to prevent users from breaking the system for other users.
 
+## Docker usage example
+
+```
+docker run -it -d --name container-spawner --network=host -v $(pwd)/config.json:/config/config.json -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/gartnera/container-spawner:master
+```
+
+You must use the `--network=host` so the process will see the correct remote address for the rate limiting and reuse features.
+
 ## Config options
 
 ### `image`
