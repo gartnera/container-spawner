@@ -156,7 +156,6 @@ class ContainerSpawner {
     if (!containerInfo.reuse) {
       logger.info(`session ${client.remoteAddress}/${containerInfo.shortId} ending`);
       await ContainerSpawner._cleanupContainer(containerInfo.container);
-      this.containerMap.delete(client.remoteAddress);
     } else if (containerInfo.activeConnections === 0) {
       containerInfo.idleTimeout = setTimeout(async () => {
         logger.info(`container ${client.remoteAddress}/${containerInfo.shortId} idle timeout`);
