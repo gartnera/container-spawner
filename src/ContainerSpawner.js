@@ -14,10 +14,7 @@ class ContainerSpawner {
 
     // ip -> time
     this.rateLimitMap = {};
-
-    // container => timeout id
-    this.containerTimeoutMap = {};
-
+    this.containerMap = new Map();
     this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
   }
 
@@ -112,7 +109,7 @@ class ContainerSpawner {
 
   async _clientHandler(client) {
     // ignore errors so logic not interrupted
-    client.on('error', () => {});
+    client.on('error', () => { });
 
     if (!client.remoteAddress) {
       logger.warn('client immediately disconnected');
@@ -121,19 +118,52 @@ class ContainerSpawner {
 
     logger.info(`new connection from ${client.remoteAddress}`);
 
-    await this._handleRateLimit(client);
+    if (!this.config.reuse) {
+      await this._handleRateLimit(client);
+    }
+
     if (client.destroyed) {
       logger.warn(`client ${client.remoteAddress} disconnected before container created`);
       return;
     }
-    const { container, availablePort } = await this._setupContainer(client);
 
-    const id = container.id.substring(0, 12);
-    logger.info(`container ${client.remoteAddress}/${id} created`);
+    let containerInfo;
+    if (this.config.reuse) {
+      this.containerMap.get(client.remoteAddress);
+    }
 
-    await this._doTcpProxy(client, availablePort);
-    logger.info(`session ${client.remoteAddress}/${id} ending`);
-    await ContainerSpawner._cleanupContainer(container);
+    if (!containerInfo) {
+      containerInfo = await this._setupContainer();
+      containerInfo.activeConnections = 0;
+      if (this.config.reuse) {
+        this.containerMap.set(client.remoteAddress, containerInfo);
+      }
+      containerInfo.shortId = containerInfo.container.id.substring(0, 12);
+      logger.info(`container ${client.remoteAddress}/${containerInfo.shortId} created`);
+    }
+
+    if (containerInfo.idleTimeout) {
+      clearTimeout(containerInfo.idleTimeout);
+      containerInfo.idleTimeout = null;
+    }
+
+    containerInfo.activeConnections += 1;
+
+    await this._doTcpProxy(client, containerInfo.availablePort);
+
+    containerInfo.activeConnections -= 1;
+
+    if (!containerInfo.reuse) {
+      logger.info(`session ${client.remoteAddress}/${containerInfo.shortId} ending`);
+      await ContainerSpawner._cleanupContainer(containerInfo.container);
+      this.containerMap.delete(client.remoteAddress);
+    } else if (containerInfo.activeConnections === 0) {
+      containerInfo.idleTimeout = setTimeout(async () => {
+        logger.info(`container ${client.remoteAddress}/${containerInfo.shortId} idle timeout`);
+        await ContainerSpawner._cleanupContainer(containerInfo.container);
+        this.containerMap.delete(client.remoteAddress);
+      }, this.config.idleTimeout);
+    }
   }
 
   start() {

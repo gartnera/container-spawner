@@ -15,145 +15,149 @@ beforeAll(async () => {
   beforeContainerCount = beforeContainers.length;
 });
 
-const config = {
-  image: 'ghcr.io/gartnera/ctf-sshd',
-  port: 1337,
-  containerPort: '22/tcp',
-};
+['reuse=false', 'reuse=true'].forEach(mode => {
+  const config = {
+    image: 'ghcr.io/gartnera/ctf-sshd',
+    port: 1337,
+    containerPort: 22,
+    idleTimeout: 1,
+    reuse: mode === 'reuse=true'
+  };
 
-describe('ContainerSpawner initilization', () => {
-  let s;
+  describe(`ContainerSpawner initialization (${mode})`, () => {
+    let s;
 
-  beforeEach(() => {
-    s = new ContainerSpawner(config);
+    beforeEach(() => {
+      s = new ContainerSpawner(config);
+    });
+
+    afterEach(async () => {
+      await s.stop();
+    });
+
+    test('start()', async () => {
+      await expect(s.start()).resolves.toBe(undefined);
+    });
   });
 
-  afterEach(async () => {
-    await s.stop();
+  describe(`Container creation (${mode})`, () => {
+    let s;
+
+    beforeEach(async () => {
+      s = new ContainerSpawner(config);
+      await s.start();
+    });
+
+    afterEach(async () => {
+      await s.stop();
+    });
+
+    test('connection creates new container', async (done) => {
+      const startingContainers = await docker.listContainers();
+      const startingContainerCount = startingContainers.length;
+
+      const client = new net.Socket();
+      client.connect(config.port, '127.0.0.1', async () => {
+        // wait for container to be created
+        await delay(1000);
+
+        const currentContainers = await docker.listContainers();
+        const currentContainerCount = currentContainers.length;
+        expect(currentContainerCount).toEqual(startingContainerCount + 1);
+
+        client.end();
+        done();
+      });
+    });
   });
 
-  test('start()', async () => {
-    await expect(s.start()).resolves.toBe(undefined);
-  });
-});
+  describe(`SSH proxy tests (${mode})`, () => {
+    let s;
 
-describe('Container creation', () => {
-  let s;
+    beforeEach(async () => {
+      s = new ContainerSpawner(config);
+      await s.start();
+    });
 
-  beforeEach(async () => {
-    s = new ContainerSpawner(config);
-    await s.start();
-  });
+    afterEach(async () => {
+      await s.stop();
+    });
 
-  afterEach(async () => {
-    await s.stop();
-  });
+    test('can connect', async (done) => {
+      const ssh = new SSH();
+      await ssh.connect({
+        host: '127.0.0.1',
+        port: config.port,
+        user: 'ctf',
+        tryKeyboard: true,
+      });
+      ssh.dispose();
+      done();
+    });
 
-  test('connection creates new container', async (done) => {
-    const startingContainers = await docker.listContainers();
-    const startingContainerCount = startingContainers.length;
+    test('can run command', async (done) => {
+      const ssh = new SSH();
+      await ssh.connect({
+        host: '127.0.0.1',
+        port: config.port,
+        user: 'ctf',
+        tryKeyboard: true,
+      });
 
-    const client = new net.Socket();
-    client.connect(config.port, '127.0.0.1', async () => {
-      // wait for container to be created
-      await delay(1000);
-
-      const currentContainers = await docker.listContainers();
-      const currentContainerCount = currentContainers.length;
-      expect(currentContainerCount).toEqual(startingContainerCount + 1);
-
-      client.end();
+      const res = await ssh.execCommand('id');
+      expect(res.stdout).toContain('ctf');
+      ssh.dispose();
       done();
     });
   });
-});
 
-describe('SSH proxy tests', () => {
-  let s;
+  describe(`Quirks (${mode})`, () => {
+    let s;
 
-  beforeEach(async () => {
-    s = new ContainerSpawner(config);
-    await s.start();
-  });
-
-  afterEach(async () => {
-    await s.stop();
-  });
-
-  test('can connect', async (done) => {
-    const ssh = new SSH();
-    await ssh.connect({
-      host: '127.0.0.1',
-      port: config.port,
-      user: 'ctf',
-      tryKeyboard: true,
-    });
-    ssh.dispose();
-    done();
-  });
-
-  test('can run command', async (done) => {
-    const ssh = new SSH();
-    await ssh.connect({
-      host: '127.0.0.1',
-      port: config.port,
-      user: 'ctf',
-      tryKeyboard: true,
+    beforeAll(async () => {
+      // wait for previous containers to be destroyed
+      await delay(1000);
     });
 
-    const res = await ssh.execCommand('id');
-    expect(res.stdout).toContain('ctf');
-    ssh.dispose();
-    done();
-  });
-});
+    beforeEach(async () => {
+      s = new ContainerSpawner(config);
+      await s.start();
+    });
 
-describe('Quirks', () => {
-  let s;
+    afterEach(async () => {
+      await s.stop();
+    });
 
-  beforeAll(async () => {
-    // wait for previous containers to be destroyed
-    await delay(1000);
-  });
+    test('nmap connect scan', async (done) => {
+      const startingContainers = await docker.listContainers();
+      const startingContainerCount = startingContainers.length;
 
-  beforeEach(async () => {
-    s = new ContainerSpawner(config);
-    await s.start();
-  });
+      await exec(`nmap -sT -p ${config.port} localhost`);
 
-  afterEach(async () => {
-    await s.stop();
-  });
+      // wait for containers to be deleted
+      await delay(1000);
+      const currentContainers = await docker.listContainers();
+      const currentContainerCount = currentContainers.length;
+      expect(currentContainerCount).toEqual(startingContainerCount);
+      done();
+    });
 
-  test('nmap connect scan', async (done) => {
-    const startingContainers = await docker.listContainers();
-    const startingContainerCount = startingContainers.length;
+    test('nmap spam', async (done) => {
+      const startingContainers = await docker.listContainers();
+      const startingContainerCount = startingContainers.length;
 
-    await exec(`nmap -sT -p ${config.port} localhost`);
+      await exec(`nmap -sT -p ${config.port} localhost`);
+      await exec(`nmap -sT -p ${config.port} localhost`);
+      await exec(`nmap -sT -p ${config.port} localhost`);
+      await exec(`nmap -sT -p ${config.port} localhost`);
 
-    // wait for containers to be deleted
-    await delay(1000);
-    const currentContainers = await docker.listContainers();
-    const currentContainerCount = currentContainers.length;
-    expect(currentContainerCount).toEqual(startingContainerCount);
-    done();
-  });
-
-  test('nmap spam', async (done) => {
-    const startingContainers = await docker.listContainers();
-    const startingContainerCount = startingContainers.length;
-
-    await exec(`nmap -sT -p ${config.port} localhost`);
-    await exec(`nmap -sT -p ${config.port} localhost`);
-    await exec(`nmap -sT -p ${config.port} localhost`);
-    await exec(`nmap -sT -p ${config.port} localhost`);
-
-    // wait for containers to be deleted
-    await delay(1000);
-    const currentContainers = await docker.listContainers();
-    const currentContainerCount = currentContainers.length;
-    expect(currentContainerCount).toEqual(startingContainerCount);
-    done();
+      // wait for containers to be deleted
+      await delay(1000);
+      const currentContainers = await docker.listContainers();
+      const currentContainerCount = currentContainers.length;
+      expect(currentContainerCount).toEqual(startingContainerCount);
+      done();
+    });
   });
 });
 

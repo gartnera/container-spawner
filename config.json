@@ -1,8 +1,9 @@
 {
   "image": "ghcr.io/gartnera/ctf-sshd",
   "port": 1337,
-  "containerPort": "22/tcp",
+  "containerPort": 22,
   "timeout": 5000,
-  "rateLimit": 5000
+  "rateLimit": 5000,
+  "reuse": true,
+  "idleTimeout": 5000
 }
-
