@@ -1,6 +1,6 @@
 const ContainerSpawner = require('../ContainerSpawner');
 
-describe('Container Spawner Initilization', () => {
+describe('Container Spawner Initialization', () => {
   test('rejects empty config', () => {
     const config = {};
 
