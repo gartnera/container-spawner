@@ -13,6 +13,8 @@
     "e2e": "jest e2e"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.0",
+    "@eslint/js": "^9.21.0",
     "async-exec": "^1.1.0",
     "eslint": "^9.21.0",
     "eslint-config-airbnb-base": "^15.0.0",
